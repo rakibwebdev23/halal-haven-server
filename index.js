@@ -34,7 +34,34 @@ async function run() {
     const reviewCollection = client.db('halalHavenDB').collection('reviews');
     const cartCollection = client.db('halalHavenDB').collection('carts');
 
+    // jwt related api 
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JWT_ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+      res.send({ token });
+    });
+
+    // token related middleware 
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
+      const token = req.headers.authorization.split(' ')[1];
+      jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET, function (error, decoded) {
+        if (error) {
+          return res.status(401).send({ message: 'unauthorized access' });
+        }
+        req.decoded = decoded;
+        next();
+      })
+    }
+
     // Users related api
+    app.get("/users",verifyToken, async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+
     app.post('/users', async (req, res) => {
       const user = req.body;
       const query = { email: user.email }
@@ -43,11 +70,6 @@ async function run() {
         return res.send ({message: "User Already exist", insertedId: null});
       }
       const result = await usersCollection.insertOne(user);
-      res.send(result);
-    });
-
-    app.get("/users", async (req, res) => {
-      const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
@@ -71,17 +93,19 @@ async function run() {
       res.send(result);
     });
 
+    // menu related api
     app.get('/menu', async (req, res) => {
       const result = await menuCollection.find().toArray();
       res.send(result);
     });
-      
+
+    // review related api 
     app.get('/review', async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     });
 
-    // order cart collection related
+    // order cart collection related api
     app.get("/carts", async (req, res) => {
       const email = req.query.email;
       const query = { email: email }
