@@ -124,6 +124,19 @@ async function run() {
       res.send(result);
     });
 
+    app.post("/menu",verifyToken, verifyAdmin, async (req, res) => {
+      const menuItem = req.body;
+      const result = await menuCollection.insertOne(menuItem);
+      res.send(result);
+    });
+
+    app.delete("/menu/:id",verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await menuCollection.deleteOne(query);
+      res.send(result);
+    })
+
     // review related api 
     app.get('/review', async (req, res) => {
       const result = await reviewCollection.find().toArray();
@@ -144,12 +157,12 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/carts/:id', async (req, res) => {
+    app.delete("/carts/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new Object(id) }
+      const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
       res.send(result);
-    });
+    })
     
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
@@ -167,6 +180,6 @@ app.get('/', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Halal Haven Restaurant server port ${port}`);
+  console.log(`Halal Haven Restaurant server port ${port}`);
     
-})
+});
