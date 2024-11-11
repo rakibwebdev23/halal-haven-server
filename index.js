@@ -75,7 +75,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/admin/:email",verifyToken, async (req, res) => {
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: 'forbidden access' });
@@ -87,7 +87,7 @@ async function run() {
         admin = user?.role === 'admin'
       }
       res.send({ admin });
-    })
+    });
 
     app.post('/users', async (req, res) => {
       const user = req.body;
@@ -217,6 +217,7 @@ async function run() {
 
     app.post("/payments", async (req, res) => {
       const payment = req.body;
+      console.log("payment cartIds", payment);
       const paymentResult = await paymentsCollection.insertOne(payment);
       const query = {
         _id: {
