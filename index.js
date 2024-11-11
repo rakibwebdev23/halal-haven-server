@@ -34,6 +34,7 @@ async function run() {
     const menuCollection = client.db('halalHavenDB').collection('menu');
     const reviewCollection = client.db('halalHavenDB').collection('reviews');
     const cartCollection = client.db('halalHavenDB').collection('carts');
+    const paymentsCollection = client.db('halalHavenDB').collection('payments');
 
     // jwt related api 
     app.post("/jwt", async (req, res) => {
@@ -194,8 +195,6 @@ async function run() {
     app.post('/create-payment-intent', verifyToken, async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
-      console.log('amount inside the intent', amount);
-
       const paymentIntent = await stripe.paymentIntents.create({
           amount: amount,
           currency: 'usd',
@@ -205,6 +204,28 @@ async function run() {
           clientSecret: paymentIntent.client_secret
       });
   });
+
+    app.get("/payments/:email",verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      if (req.params.email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      const result = await paymentsCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentsCollection.insertOne(payment);
+      const query = {
+        _id: {
+            $in: payment.cartItemIds.map(id => new ObjectId(id))
+        }
+    }
+      const deleteResult = await cartCollection.deleteMany(query);
+      res.send({ paymentResult, deleteResult });
+    });
     
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
