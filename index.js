@@ -227,6 +227,67 @@ async function run() {
       const deleteResult = await cartCollection.deleteMany(query);
       res.send({ paymentResult, deleteResult });
     });
+
+    // stats or analytics
+    app.get("/admin-stats",verifyToken, verifyAdmin, async (req, res) => {
+      const users = await usersCollection.estimatedDocumentCount();
+      const menuItems = await menuCollection.estimatedDocumentCount();
+      const orders = await paymentsCollection.estimatedDocumentCount();
+      const result = await paymentsCollection.aggregate([
+        {
+          $group: {
+            _id: null, // Group all documents together
+            totalRevenue: { $sum: "$price" } // Sum the `price` field for all documents
+          }
+        }
+      ]).toArray();
+      
+      // Check if the result has any documents
+      const revenue = result.length > 0 ? result[0].totalRevenue : 0;
+      
+      res.send({
+        users,
+        menuItems,
+        orders,
+        revenue
+      });
+    });
+
+    // using aggregate pipeline
+    app.get("/order-stats",verifyToken, verifyAdmin, async (req, res) => {
+      const result = await paymentsCollection.aggregate([
+        {
+          $unwind: '$menuItemIds'
+        },
+        {
+          $lookup: {
+            from: "menu",
+            localField: "menuItemIds",
+            foreignField: "_id",
+            as: "menuItems"
+          }
+        },
+        {
+          $unwind: "$menuItems"
+        },
+        {
+          $group: {
+            _id: "$menuItems.category",
+            totalQuantity: { $sum: 1 },
+            totalRevenue: { $sum: "$menuItems.price" }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            category: "$_id",
+            totalQuantity: "$totalQuantity",
+            totalRevenue: "$totalRevenue"
+          }
+        }
+      ]).toArray();
+      res.send(result);
+    });
     
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
