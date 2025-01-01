@@ -222,9 +222,9 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/payments", async (req, res) => {
+    app.post("/payments",verifyToken, async (req, res) => {
       const payment = req.body;
-      console.log("payment cartIds", payment);
+      // console.log("payment cartIds", payment);
       const paymentResult = await paymentsCollection.insertOne(payment);
       const query = {
         _id: {
